@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 const passport = require('passport');
 const flash = require('express-flash');
 const session = require('express-session');
+const methodOverride = require('method-override');
 
 const initializePassport = require('./passport-config');
 initializePassport(
@@ -31,19 +32,20 @@ app.use(session({
 	resave: false,
 	saveUninitialized: false
 }));
+app.use(methodOverride('_method'));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get('/', (req, res) => {
-	res.render('index.pug', { name: 'yosuke' });
+app.get('/', checkAuthenticated, (req, res) => {
+	res.render('index.pug', { name: req.user.name });
 });
 
-app.get('/login', (req, res) => {
+app.get('/login', checkNotAuthenticated,  (req, res) => {
 	res.render('login.pug');
 });
 
-app.get('/register', (req, res) => {
+app.get('/register', checkNotAuthenticated,  (req, res) => {
 	res.render('register.pug');
 });
 
@@ -68,5 +70,28 @@ app.post('/register',async (req, res) => {
 	}
 	console.log(users);
 });
+
+app.delete('/logout', (req, res) => {
+	req.logOut();
+	res.redirect('/login');
+})
+
+function checkAuthenticated(req, res, next) {
+	if (req.isAuthenticated()) {
+		return next();
+	}
+
+	res.redirect('/login');
+}
+
+function checkNotAuthenticated(req, res, next) {
+	console.log('check')
+	if (req.isAuthenticated()) {
+		console.log('authenticated');
+		return res.redirect('/');
+	}
+	next();
+}
+
 
 app.listen(3000);
